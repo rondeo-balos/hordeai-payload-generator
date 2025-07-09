@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AI Horde Payload Builder</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    textarea, input, select { width: 100%; margin: 8px 0; padding: 6px; }
+    label { font-weight: bold; margin-top: 12px; display: block; }
+    .row { display: flex; gap: 10px; }
+    .row > div { flex: 1; }
+    button { margin-top: 10px; padding: 10px; }
+  </style>
+</head>
+<body>
+
+  <h2>AI Horde Payload Builder</h2>
+
+  <label>Prompt</label>
+  <textarea id="prompt" rows="3"></textarea>
+
+  <div class="row">
+    <div>
+      <label>Sampler</label>
+      <input id="sampler_name" placeholder="e.g. k_dpmpp_2s_a">
+    </div>
+    <div>
+      <label>CFG Scale</label>
+      <input type="number" id="cfg_scale" value="7.5" step="0.1">
+    </div>
+  </div>
+
+  <div class="row">
+    <div>
+      <label>Denoising Strength</label>
+      <input type="number" id="denoising_strength" value="0.75" step="0.05">
+    </div>
+    <div>
+      <label>Steps</label>
+      <input type="number" id="steps" value="30">
+    </div>
+  </div>
+
+  <label>Post Processing</label>
+  <select id="post_processing" multiple>
+    <option value="GFPGAN" selected>GFPGAN</option>
+    <option value="RealESRGAN_x4plus">RealESRGAN_x4plus</option>
+    <option value="CodeFormer">CodeFormer</option>
+  </select>
+
+  <label>Seed</label>
+  <input id="seed" placeholder="The little seed that could">
+
+  <label>Source Image URL</label>
+  <input id="source_image" placeholder="https://example.com/image.png">
+
+  <label>Style ID</label>
+  <input id="style" placeholder="UUID of style">
+
+  <div class="row">
+    <button onclick="exportPayload()">Export JSON</button>
+    <button onclick="importPayload()">Import JSON</button>
+    <button onclick="saveToLocal()">💾 Save</button>
+    <button onclick="loadFromLocal()">📂 Load</button>
+  </div>
+
+  <textarea id="json_output" rows="12" placeholder="Exported JSON will appear here..."></textarea>
+
+  <script>
+    function buildPayload() {
+      return {
+        prompt: document.getElementById('prompt').value,
+        params: {
+          sampler_name: document.getElementById('sampler_name').value,
+          cfg_scale: parseFloat(document.getElementById('cfg_scale').value),
+          denoising_strength: parseFloat(document.getElementById('denoising_strength').value),
+          steps: parseInt(document.getElementById('steps').value),
+          post_processing: Array.from(document.getElementById('post_processing').selectedOptions).map(opt => opt.value)
+        },
+        seed: document.getElementById('seed').value,
+        source_image: document.getElementById('source_image').value,
+        style: document.getElementById('style').value,
+        source_processing: "img2img",
+        nsfw: false,
+        validated_backends: true,
+        r2: true,
+        shared: false,
+        replacement_filter: true,
+        dry_run: false,
+        allow_downgrade: false
+      };
+    }
+
+    function exportPayload() {
+      const json = buildPayload();
+      document.getElementById('json_output').value = JSON.stringify(json, null, 2);
+    }
+
+    function importPayload() {
+      try {
+        const json = JSON.parse(document.getElementById('json_output').value);
+        document.getElementById('prompt').value = json.prompt || '';
+        document.getElementById('sampler_name').value = json.params?.sampler_name || '';
+        document.getElementById('cfg_scale').value = json.params?.cfg_scale || 7.5;
+        document.getElementById('denoising_strength').value = json.params?.denoising_strength || 0.75;
+        document.getElementById('steps').value = json.params?.steps || 30;
+        document.getElementById('seed').value = json.seed || '';
+        document.getElementById('source_image').value = json.source_image || '';
+        document.getElementById('style').value = json.style || '';
+
+        const options = document.getElementById('post_processing').options;
+        for (let i = 0; i < options.length; i++) {
+          options[i].selected = json.params?.post_processing?.includes(options[i].value) || false;
+        }
+      } catch (e) {
+        alert('Invalid JSON');
+      }
+    }
+
+    function saveToLocal() {
+      localStorage.setItem('horde_payload_gui', JSON.stringify(buildPayload()));
+      alert('Settings saved to local storage.');
+    }
+
+    function loadFromLocal() {
+      const data = localStorage.getItem('horde_payload_gui');
+      if (data) {
+        document.getElementById('json_output').value = data;
+        importPayload();
+      } else {
+        alert('No saved data found.');
+      }
+    }
+  </script>
+
+</body>
+</html>
